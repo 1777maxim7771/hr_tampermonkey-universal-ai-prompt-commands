@@ -1,42 +1,55 @@
 // ==UserScript==
 // @name         Tampermonkey Universal AI Prompt Commands HR
 // @namespace    local.tampermonkey.universal.ai.prompt.commands.hr
-// @version      1.0.0
-// @description  Zamjenjuje kratke naredbe HR1-HR10 gotovim AI promptovima u AI chatovima.
+// @version      1.1.0
+// @description  Hrvatska verzija: zamjenjuje univerzalne okidače Q1-Q10 gotovim AI promptovima za brzi unos u AI chatovima
 // @author       1777maxim7771
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 
-(function () {
-    'use strict';
-
-    // Hrvatska verzija. Zamjenjuje se samo točna naredba potpunim promptom.
-    const COMMANDS = {
-        'HR1': `Prevedi dostavljeni tekst na hrvatski jezik potpuno i točno. Sačuvaj smisao, redoslijed informacija, imena, datume, iznose, brojeve dokumenata, organizacije i važne formulacije. Ne dodaj vlastite zaključke i ne skraćuj sadržaj.`,
-        'HR2': `Sažmi dostavljeni tekst na hrvatskom jeziku prema smislu i kontekstu. Objasni o čemu se radi, tko kome piše, koja je glavna tema i koji su zahtjevi, odluke, datumi, rokovi, iznosi ili važni detalji navedeni.`,
-        'HR3': `Napravi na hrvatskom vrlo kratak tematski sažetak ovog pisma, strogo u jednom retku. Navedi pošiljatelja, temu, što se priopćava ili traži i koji su datumi, rokovi, iznosi, dokumenti ili koraci važni.`,
-        'HR4': `Prevedi dostavljeni tekst na jednostavan i razumljiv njemački jezik, razina A2-B1. Formuliraj tekst pristojno, službeno i gramatički ispravno. Sačuvaj smisao, imena, datume, iznose, adrese, organizacije i važne detalje.`,
-        'HR5': `Ispravi dostavljeni hrvatski tekst. Učini ga gramatički ispravnim, jasnim, logičnim i prirodnim, ali sačuvaj izvorni smisao. Ukloni pogreške, ponavljanja i neprikladne formulacije. Ne dodaj činjenice kojih nema u izvornom tekstu.`,
-        'HR6': `Napiši kratak, pristojan i služben odgovor na ovo pismo na hrvatskom jeziku. Odgovori konkretno na sadržaj, bez nepotrebnih rečenica. Ako je potrebno, potvrdi primitak, zatraži pojašnjenje, navedi dokumente ili priopći tražene informacije.`,
-        'HR7': `Objasni na hrvatskom jednostavnim riječima što ovaj tekst znači. Analiziraj kontekst, tko piše, kome, o kojoj temi, što se traži, što treba učiniti i koji su datumi, rokovi, iznosi, dokumenti ili uvjeti važni.`,
-        'HR8': `Izvuci iz teksta sve važne činjenice i strukturiraj ih na hrvatskom jeziku. Posebno navedi osobe, organizacije, adrese, datume, rokove, iznose, brojeve dokumenata, zahtjeve, odluke, obveze, spomenute dokumente i sljedeće korake. Ne izmišljaj informacije.`,
-        'HR9': `Sastavi na hrvatskom jasan popis potrebnih radnji na temelju ovog teksta. Navedi što treba učiniti, koje dokumente pripremiti, kome odgovoriti, kamo se obratiti, koje rokove poštovati i na što obratiti pozornost. Poredaj radnje po prioritetu.`,
-        'HR10': `Na temelju dostavljenog teksta napiši pristojno službeno pismo na jednostavnom njemačkom jeziku, razina A2-B1. Sačuvaj imena, datume, iznose, adrese, organizacije, brojeve dokumenata i okolnosti. Strukturiraj pismo s pozdravom, kratkim objašnjenjem, glavnim zahtjevom i završetkom. Završi s: Mit freundlichen Grüßen`
-    };
-
-    const EDITABLE_SELECTORS = ['textarea', 'input[type="text"]', 'input[type="search"]', '[contenteditable="true"]', '[contenteditable="plaintext-only"]', '[role="textbox"]'];
-    function isEditableElement(element) { if (!element || !element.matches) return false; if (element.disabled || element.readOnly) return false; const tagName = element.tagName ? element.tagName.toLowerCase() : ''; const inputType = (element.getAttribute('type') || '').toLowerCase(); if (tagName === 'input' && !['text', 'search'].includes(inputType)) return false; return EDITABLE_SELECTORS.some(selector => element.matches(selector)); }
-    function findEditableElement(target) { if (!target) return null; if (isEditableElement(target)) return target; if (target.closest) { const element = target.closest(EDITABLE_SELECTORS.join(',')); if (isEditableElement(element)) return element; } return null; }
-    function getText(element) { const tagName = element.tagName ? element.tagName.toLowerCase() : ''; return tagName === 'textarea' || tagName === 'input' ? element.value || '' : element.innerText || element.textContent || ''; }
-    function normalizeCommand(text) { return String(text || '').trim().replace(/\s+/g, '').toUpperCase(); }
-    function dispatchInputEvents(element, text) { try { element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertReplacementText', data: text })); } catch (error) { element.dispatchEvent(new Event('input', { bubbles: true })); } element.dispatchEvent(new Event('change', { bubbles: true })); }
-    function setCursorToEnd(element) { element.focus(); if ('selectionStart' in element) { const length = element.value.length; element.setSelectionRange(length, length); return; } const range = document.createRange(); const selection = window.getSelection(); range.selectNodeContents(element); range.collapse(false); selection.removeAllRanges(); selection.addRange(range); }
-    function replaceText(element, newText) { const tagName = element.tagName ? element.tagName.toLowerCase() : ''; element.focus(); if (tagName === 'textarea' || tagName === 'input') { element.value = newText; } else { try { const range = document.createRange(); const selection = window.getSelection(); range.selectNodeContents(element); selection.removeAllRanges(); selection.addRange(range); document.execCommand('insertText', false, newText); } catch (error) { element.textContent = newText; } } setCursorToEnd(element); dispatchInputEvents(element, newText); }
-    function showNotification(message) { const oldBox = document.getElementById('tm-ai-prompt-commands-notification'); if (oldBox) oldBox.remove(); const box = document.createElement('div'); box.id = 'tm-ai-prompt-commands-notification'; box.textContent = message; box.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:999999;background:#111;color:#fff;padding:12px 18px;border-radius:10px;font:14px Arial,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.35);max-width:420px;line-height:1.4'; document.body.appendChild(box); setTimeout(() => box.remove(), 2200); }
-    function checkAndReplace(target) { const editable = findEditableElement(target); if (!editable) return; const command = normalizeCommand(getText(editable)); if (!Object.prototype.hasOwnProperty.call(COMMANDS, command)) return; replaceText(editable, COMMANDS[command]); showNotification(`Naredba ${command} zamijenjena je gotovim AI promptom`); }
-    document.addEventListener('input', event => setTimeout(() => checkAndReplace(event.target), 20), true);
-    document.addEventListener('keyup', event => setTimeout(() => checkAndReplace(event.target), 20), true);
-    document.addEventListener('paste', event => setTimeout(() => checkAndReplace(event.target), 50), true);
+(function(){'use strict';
+/* Svrha: brži rad s ChatGPT, Gemini, Claude, Copilot i drugim AI chatovima. Q1-Q10 su univerzalni okidači i mogu se promijeniti u vlastite riječi ili fraze. */
+const COMMANDS={
+'Q1':`Prevedi zadani tekst potpuno i točno na hrvatski jezik.
+Sačuvaj značenje, redoslijed informacija, imena, datume, iznose, brojeve dokumenata, nazive organizacija i važne formulacije.
+Ne dodaj vlastite zaključke, ne skraćuj tekst i ne mijenjaj sadržaj.`,
+'Q2':`Sažmi zadani tekst na hrvatskom jeziku prema značenju i kontekstu.
+Objasni o čemu je tekst, tko kome piše, koja je glavna tema i koji se zahtjevi, molbe, odluke, datumi, rokovi, iznosi ili važni detalji spominju.`,
+'Q3':`Napravi kratak tematski sažetak pisma na hrvatskom jeziku strogo u jednom retku.
+Navedi pošiljatelja, temu, što se priopćava ili traži i koji su datumi, rokovi, iznosi, dokumenti ili radnje važni.`,
+'Q4':`Prevedi zadani tekst na jednostavan i razumljiv njemački jezik razine A2-B1.
+Tekst mora biti pristojan, služben i gramatički ispravan.
+Sačuvaj izvorno značenje, datume, imena, iznose, adrese, organizacije i važne detalje.`,
+'Q5':`Ispravi zadani hrvatski tekst.
+Učini ga gramatički ispravnim, jasnim i logičnim, ali sačuvaj izvorno značenje.
+Ukloni pogreške, ponavljanja, neprikladne formulacije i previše razgovorne dijelove.
+Ne dodaj činjenice koje nisu u izvornom tekstu.`,
+'Q6':`Napiši kratak, pristojan i službeni odgovor na ovo pismo na hrvatskom jeziku.
+Odgovor mora biti jasan i konkretan, bez nepotrebnih rečenica.
+Ako treba potvrditi primitak, razjasniti dokumente, zatražiti objašnjenje ili priopćiti informaciju, formuliraj to ispravno.`,
+'Q7':`Objasni na hrvatskom jednostavnim riječima što ovaj tekst znači.
+Analiziraj kontekst: tko piše, o kojem pitanju, što se traži, što treba učiniti i koji su rokovi, datumi, iznosi, dokumenti ili uvjeti važni.`,
+'Q8':`Izdvoji sve važne činjenice iz zadanog teksta i strukturiraj ih na hrvatskom jeziku.
+Navedi odvojeno: osobe, organizacije, adrese, datume, rokove, iznose, brojeve dokumenata, zahtjeve, odluke, obveze, spomenute dokumente i sljedeće korake.
+Ne izmišljaj informacije. Ako nešto nedostaje, napiši: nije navedeno.`,
+'Q9':`Izradi na hrvatskom jasan popis radnji koje treba izvršiti na temelju ovog teksta.
+Odredi što treba učiniti, koje dokumente pripremiti, kome odgovoriti, kome se obratiti, koje rokove poštovati i na što obratiti pažnju.
+Podijeli radnje po prioritetu: hitno, važno, može kasnije.`,
+'Q10':`Sastavi pristojno službeno pismo na njemačkom jeziku na temelju zadanog teksta.
+Pismo mora biti jednostavno, jasno i ispravno, razina A2-B1.
+Sačuvaj sve važne činjenice: imena, datume, iznose, adrese, organizacije, brojeve dokumenata i okolnosti.
+Završi s: Mit freundlichen Grüßen`};
+const S=['textarea','input[type="text"]','input[type="search"]','[contenteditable="true"]','[contenteditable="plaintext-only"]','[role="textbox"]'];
+function ie(e){if(!e||!e.matches)return false;if(e.disabled||e.readOnly)return false;const t=e.tagName?e.tagName.toLowerCase():'';const y=(e.getAttribute('type')||'').toLowerCase();if(t==='input'&&!['text','search'].includes(y))return false;return S.some(s=>e.matches(s));}
+function fe(t){if(!t)return null;if(ie(t))return t;if(t.closest){const e=t.closest(S.join(','));if(ie(e))return e;}return null;}
+function gt(e){const t=e.tagName?e.tagName.toLowerCase():'';return(t==='textarea'||t==='input')?(e.value||''):(e.innerText||e.textContent||'');}
+function nc(x){return String(x||'').trim().replace(/\s+/g,'').toUpperCase();}
+function end(e){e.focus();const t=e.tagName?e.tagName.toLowerCase():'';if(t==='textarea'||t==='input'){const l=e.value.length;e.setSelectionRange(l,l);return;}const r=document.createRange(),s=window.getSelection();r.selectNodeContents(e);r.collapse(false);s.removeAllRanges();s.addRange(r);}
+function ev(e,text){try{e.dispatchEvent(new InputEvent('input',{bubbles:true,cancelable:true,inputType:'insertReplacementText',data:text}));}catch(_){e.dispatchEvent(new Event('input',{bubbles:true}));}e.dispatchEvent(new Event('change',{bubbles:true}));}
+function rt(e,text){const t=e.tagName?e.tagName.toLowerCase():'';e.focus();if(t==='textarea'||t==='input'){e.value=text;end(e);ev(e,text);return;}try{const r=document.createRange(),s=window.getSelection();r.selectNodeContents(e);s.removeAllRanges();s.addRange(r);document.execCommand('insertText',false,text);}catch(_){e.textContent=text;}end(e);ev(e,text);}
+function note(m){const o=document.getElementById('tampermonkey-universal-ai-prompt-commands-notification');if(o)o.remove();const b=document.createElement('div');b.id='tampermonkey-universal-ai-prompt-commands-notification';b.textContent=m;b.style.cssText='position:fixed;right:20px;bottom:20px;z-index:999999;background:#111;color:#fff;padding:12px 18px;border-radius:10px;font:14px Arial,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.35)';document.body.appendChild(b);setTimeout(()=>b.remove(),2200);}
+function cr(t){const e=fe(t);if(!e)return;const c=nc(gt(e));if(!Object.prototype.hasOwnProperty.call(COMMANDS,c))return;rt(e,COMMANDS[c]);note(`Okidač ${c} zamijenjen je gotovim AI promptom`);}
+document.addEventListener('input',e=>setTimeout(()=>cr(e.target),20),true);document.addEventListener('keyup',e=>setTimeout(()=>cr(e.target),20),true);document.addEventListener('paste',e=>setTimeout(()=>cr(e.target),50),true);
 })();
